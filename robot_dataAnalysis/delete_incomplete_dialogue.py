@@ -8,7 +8,7 @@ import openpyxl.styles as sty
 from openpyxl import Workbook
 
 # 本脚本将对话分行的数据进行拼接，并标明是否对话完整。同时表明最后一句话术，以及对应的话术标签和挂断标签。
-# 前提：A列：对话ID；B列：拨打时间；C列，姓名；D列，对话语句
+# 前提：A列：对话ID；B列：拨打时间；C列，姓名；D列，对话语句；E列，工单号；F列，已还款
 def merge_dialogue():
     # 自定义检测Excel的A列最大行函数。openpyxl的worksheet.max_row并不准
     def find_maxrow(worksheet):
@@ -42,7 +42,7 @@ def merge_dialogue():
     }
 
     # 打开Excel
-    wb = load_workbook('D:/智能催收数据标注0627-0701.xlsx')
+    wb = load_workbook('D:/对话语句导出.xlsx')
     ws = wb['Sheet1']
     rows = find_maxrow(ws)
 
@@ -62,14 +62,19 @@ def merge_dialogue():
                 # 如果对话ID已存在lableDataDic的Key中，则将“对话语句”前加换行符，接入该对话ID的记录中
                 if ws.cell(column=col,row=row).value in labelDataDic.keys():
                     labelDataDic[ws.cell(column=col,row=row).value][2] += '\n' + ws.cell(column=col+3 ,row=row).value
-                # 如果对话ID不在lableDataDic的Key中，则给该字典新增一条记录，以对话ID为Key，以List[对话时间，姓名，对话语句拼接，对话是否完整]为值。
+                # 如果对话ID不在lableDataDic的Key中，则给该字典新增一条记录，以对话ID为Key，以List[对话时间，姓名，对话语句拼接，对话是否完整，是否已回款]为值。
                 else:
-                    labelDataDic[ws.cell(column=col,row=row).value] = [ws.cell(column=col+1, row=row).value.strftime('%Y-%m-%d %H:%M:%S'), ws.cell(column=col+2 ,row=row).value,ws.cell(column=col+3 ,row=row).value,"对话完整"]
+                    labelDataDic[ws.cell(column=col,row=row).value] = [ws.cell(column=col+1, row=row).value.strftime('%Y-%m-%d %H:%M:%S'), ws.cell(column=col+2 ,row=row).value,ws.cell(column=col+3 ,row=row).value,"对话完整",""]
+                    # 判断是否已回款。E列=F列代表回款
+                    if ws.cell(column=col+4,row=row).value == ws.cell(column=col+5,row=row).value:
+                        labelDataDic[ws.cell(column=col,row=row).value][4] = "已回款"
             else:
                 if ws.cell(column=col,row=row).value in labelDataDic.keys():
                     labelDataDic[ws.cell(column=col,row=row).value][2] += '\n' + ws.cell(column=col+3 ,row=row).value
                 else:
-                    labelDataDic[ws.cell(column=col,row=row).value] = [ws.cell(column=col+1, row=row).value.strftime('%Y-%m-%d %H:%M:%S'), ws.cell(column=col+2 ,row=row).value,ws.cell(column=col+3 ,row=row).value,"对话中断"]
+                    labelDataDic[ws.cell(column=col,row=row).value] = [ws.cell(column=col+1, row=row).value.strftime('%Y-%m-%d %H:%M:%S'), ws.cell(column=col+2 ,row=row).value,ws.cell(column=col+3 ,row=row).value,"对话中断",""]
+                    if ws.cell(column=col+4,row=row).value == ws.cell(column=col+5,row=row).value:
+                        labelDataDic[ws.cell(column=col,row=row).value][4] = "已回款"
 
 
     # print(labelDataDic)
@@ -89,6 +94,7 @@ def merge_dialogue():
     ws2['F1'] = "被挂断的话术"
     ws2['G1'] = "话术标签"
     ws2['H1'] = "挂断标签"
+    ws2['I1'] = "是否已回款"
 
     for row in range(2, len(labelDataDic) + 2):
         for col in range(1, 2):
@@ -97,12 +103,14 @@ def merge_dialogue():
             ws2.cell(column=col + 2, row=row).value = sumLi[row - 2][1][1]
             ws2.cell(column=col + 3, row=row).value = sumLi[row - 2][1][2]
             ws2.cell(column=col + 4, row=row).value = sumLi[row - 2][1][3]
+            ws2.cell(column=col + 8, row=row).value = sumLi[row - 2][1][4]
             # 添加挂断标签。无论对话是否完整
             dialogue_list = sumLi[row - 2][1][2].split('\n')
             ws2.cell(column=col + 5, row=row).value = dialogue_list[-1]
             print("第" + str(row-1) + "条：" + dialogue_list[-1])
             ws2.cell(column=col + 6, row=row).value = hangupDic.get(dialogue_list[-1])[0] if dialogue_list[-1] in hangupDic else "00000"
             ws2.cell(column=col + 7, row=row).value = hangupDic.get(dialogue_list[-1])[1] if dialogue_list[-1] in hangupDic else "00000"
+
 
 
     wb2.save(filename='D:/挂断标签统计.xlsx')

@@ -79,7 +79,7 @@ def merge_dialogue():
 
     # print(labelDataDic)
 
-    # 将字典存入Excel。因为字典无序不能循环，所以先将字典转换为List中的两位子tuple
+    # 将字典存入Excel。因为字典无序不能循环，所以先将字典转换为带两位子tuple的List
     sumLi = []
     for kv in labelDataDic.items():
         sumLi.append(kv)

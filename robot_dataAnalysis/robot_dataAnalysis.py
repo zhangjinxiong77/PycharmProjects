@@ -65,7 +65,7 @@ def find_maxrow(worksheet):
     return i-1
 
 # 打开Excel
-wb = load_workbook('D:/0622-0625.xlsx')
+wb = load_workbook('D:/催收系统测试集.xlsx')
 ws = wb['Sheet1']
 rows = find_maxrow(ws)
 

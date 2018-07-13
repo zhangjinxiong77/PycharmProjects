@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from openpyxl.compat import range
 import openpyxl.styles as sty
 
-# 本脚本使用已生成的智能催收多轮对话测试集，调用多轮对话接口，来测试算法的准确性，同时给出对应的错误类型
+
 # 自定义对话错误类型函数。参数为（正确回答和错误回答的合并，正确的回答，错误的回答）
 def wrong_type(merge,rightAnswer,wrongAnswer):
     wrongType = ''

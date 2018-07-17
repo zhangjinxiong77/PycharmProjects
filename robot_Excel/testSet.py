@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import time
 import requests
 import json
-import re
 import uuid
 import openpyxl
 from openpyxl import load_workbook
@@ -31,10 +29,15 @@ for row in range(2, rows + 1):
         if "再见" in ws.cell(column=col, row=row).value:
             completeLi.append(ws.cell(column=1, row=row).value)
 
-print('完整的对话共'+str(len(completeLi))+'条')
-# 开始执行循环
+# 创建字典。以compliteLi中的CALL_ID为key，以该轮对话的“正确/错误”为值
 resultDic={}
-for row in range(2, 100):
+for callid in completeLi:
+    resultDic[callid] = ""
+
+print('完整的对话共'+str(len(completeLi))+'条')
+
+# 开始执行循环
+for row in range(2, rows+1):
     for col in range(1, 2):
         print(row)
         if ws.cell(column=col,row=row).value in completeLi:
@@ -43,26 +46,44 @@ for row in range(2, 100):
             if dialogue == '机器人：您好，请问您是机主本人吗':
                 uuid_stamp = uuid.uuid4().hex
                 dialogueAPI_url = 'http://47.94.52.113:5061/api/v0.1/ask?project_id=48334234b5544627aa1cc977eec6cec6&query={}&uid={}'.format('', uuid_stamp)
+                intention_url = 'http://47.95.36.52:13927/getdata?callId={}'.format(uuid_stamp)
                 dialogue_res = requests.get(dialogueAPI_url).text
-                ws.cell(column=col+5, row=row).value = dialogue
                 print(dialogue)
             else:
                 if dialogue[:2] == '客户':
-                    if resultDic[ws.cell(column=col,row=row).value] != "错误":
-                        dialogueAPI_url = 'http://47.94.52.113:5061/api/v0.1/ask?project_id=48334234b5544627aa1cc977eec6cec6&query={}&uid={}'.format(dialogue, uuid_stamp)
-                        dialogue_res = requests.get(dialogueAPI_url).text
-                        dialogue_res = json.loads(dialogue_res)
-                        robotAnswer = dialogue_res['data']['answer']
-                        if robotAnswer != ws.cell(column=col+3, row=row+1).value:
-                            resultDic[ws.cell(column=col,row=row).value] = "错误"
-                            print(dialogue)
-                            print('错误回答：'+ robotAnswer)
-                        else:
-                            print(dialogue)
+                    if resultDic[ws.cell(column=col,row=row).value] != "错误" and resultDic[ws.cell(column=col,row=row).value] != "接口报错":
+                        try:
+                            # 获取机器人回复，并与测试集中的正确回复进行比较
+                            slicedDialogue = dialogue[3:]
+                            dialogueAPI_url = 'http://47.94.52.113:5061/api/v0.1/ask?project_id=48334234b5544627aa1cc977eec6cec6&query={}&uid={}'.format(slicedDialogue, uuid_stamp)
+                            dialogue_res = requests.get(dialogueAPI_url).text
+                            dialogue_res = json.loads(dialogue_res)
+                            robotAnswer = dialogue_res['data']['answer']
+                            robotAnswer = "机器人：" + robotAnswer
+                            if robotAnswer != ws.cell(column=col+3, row=row+1).value:
+                                resultDic[ws.cell(column=col,row=row).value] = "错误"
+                                print(dialogue)
+                                print('正确回答：'+ ws.cell(column=col+3, row=row+1).value)
+                                print('错误回答：'+ robotAnswer)
+                                ws.cell(column=col+5, row=row+1).value = robotAnswer
+                            else:
+                                print(dialogue)
+                            # 获取意图，并与测试集中的正确意图进行比较
+                            intention_res = requests.get(intention_url).text
+                            intention_res = json.loads(intention_res)
+                            intention_res = intention_res['data']['intention']
+                            print("意图:" + intention_res)
+                            if intention_res != ws.cell(column=col + 4, row=row).value:
+                                ws.cell(column=col + 6, row=row).value = intention_res
+
+                        except:
+                            resultDic[ws.cell(column=col, row=row).value] = "接口报错"
+                            ws.cell(column=col + 7, row=row).value = "接口报错"
                 else:
-                    if resultDic[ws.cell(column=col, row=row).value] != "错误":
+                    if resultDic[ws.cell(column=col, row=row).value] != "错误" and resultDic[ws.cell(column=col,row=row).value] != "接口报错":
                         print(dialogue)
 
+wb.save(filename='D:/测试集测试结果.xlsx')
 
 
 
